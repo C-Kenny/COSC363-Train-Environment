@@ -6,3 +6,5 @@
 - Learn C++, so it doesn't look like C pulled straight from an embedded system
 - Refactor (WTF it's in 1 file 1400 LOC file lol)
 - Add object collisions for barrier arms
+- Add screenshots
+- Investigate difficult to track-down but existing mouse bug where looking up too high causes weird math to fail
