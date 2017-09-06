@@ -31,8 +31,8 @@ string USAGE_MESSAGE = "N (where N is the count of desired wagons)\n";
 // Camera
 float camera_pov[] = {0, 14.0, 200, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0};
 float camera_pov_reset[] = {0, 14.0, 200, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0};
-float cam_angle_x = 90.0; 
-float cam_angle_y = 30.0; 
+float cam_angle_x = 90.0;
+float cam_angle_y = 30.0;
 float dist_cam = 150.0;
 float pan_radius = 800;
 float pan_height = 70;
@@ -58,7 +58,7 @@ float TRACK_OFFSET_X = 00.0;
 float TRACK_OFFSET_Y = 0.0;
 float TRACK_OFFSET_Z = 180.0;
 
-// trains (make one train, copy and translate it 
+// trains (make one train, copy and translate it
 float train0_location_x = 0.0;
 float train0_location_z = TRACK_OFFSET_Z + (WAGON_WIDTH/2.0);     // half wagon
 float train0_speed = 3;
@@ -77,7 +77,7 @@ int previous_y = 0;
 int WINDOW_WIDTH = 800;
 int WINDOW_HEIGHT = 600;
 
-// keyboard buffer 
+// keyboard buffer
 bool keyboard_down[265] = {false};
 int keyboard_down_count = 0;
 unsigned char last_char = '\0';
@@ -114,39 +114,42 @@ void loadGLTextures()               // Load bitmaps And Convert To Textures
     glBindTexture(GL_TEXTURE_2D, txId[0]);
     //loadTGA("textures/grass1.tga");
     loadTGA("grass1.tga");
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); 
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat grass
 
+    /*
+     * TODO: Investigate where these files were sourced from and find them
     glBindTexture(GL_TEXTURE_2D, txId[1]);
     loadTGA("metal.tga");
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); 
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat metal 
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat metal
+    */
 
     glBindTexture(GL_TEXTURE_2D, txId[2]);
     loadTGA("barrier_body.tga");
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); 
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat stone
 
     glBindTexture(GL_TEXTURE_2D, txId[3]);
     loadTGA("bricks.tga");
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); 
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat brick 
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat brick
 
     /*
     glBindTexture(GL_TEXTURE_2D, txId[4]);
     loadTGA("cobble.tga");
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); 
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat cobble
     */
 
     glBindTexture(GL_TEXTURE_2D, txId[5]);
     loadTGA("stone.tga");
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); 
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat stone
 }
@@ -182,7 +185,7 @@ void floor()
 
 //------- Rail Track ----------------------------------------------------
 // A single circular track of specified radius
-void track(float radius)  
+void track(float radius)
 {
 	float angle1,angle2, ca1,sa1, ca2,sa2;
 	float x1,z1, x2,z2, x3,z3, x4,z4;  //four points of a quad
@@ -195,7 +198,7 @@ void track(float radius)
 		angle2 = (i+5) * toRad;
 		ca1=cos(angle1); ca2=cos(angle2);
 		sa1=sin(angle1); sa2=sin(angle2);
-		x1=(radius-0.5)*sa1; z1=(radius-0.5)*ca1; 
+		x1=(radius-0.5)*sa1; z1=(radius-0.5)*ca1;
 		x2=(radius+0.5)*sa1; z2=(radius+0.5)*ca1;
 		x3=(radius+0.5)*sa2; z3=(radius+0.5)*ca2;
 		x4=(radius-0.5)*sa2; z4=(radius-0.5)*ca2;
@@ -204,7 +207,7 @@ void track(float radius)
 		glVertex3f(x1, 1.0, z1);
 		glVertex3f(x2, 1.0, z2);
 		glVertex3f(x3, 1.0, z3);
-		glVertex3f(x4, 1.0, z4); 
+		glVertex3f(x4, 1.0, z4);
 
 		glNormal3f(-sa1, 0.0, -ca1);   //Quad 2 facing inward
 		glVertex3f(x1, 0.0, z1);
@@ -228,21 +231,21 @@ void draw_linear_tracks(int number_of_bricks) {
     //glColor4f(0.5, 0.0, 0.4, 1.0);
     glColor4f(1.0, 1.0, 1.0, 0.8);
 
-    // code stolen from track() function given by lecturer 
+    // code stolen from track() function given by lecturer
     for (int i = 0; i < number_of_bricks; i += 5) {
-        glNormal3f(0, 1., 0.);      
+        glNormal3f(0, 1., 0.);
         glVertex3f(0+i, 1.0, 1);
         glVertex3f(5+i, 1.0, 1);
         glVertex3f(5+i, 1.0, 0);
-        glVertex3f(0+i, 1.0, 0); 
-        
-        glNormal3f(0.0, 0.0, 1.0);   
+        glVertex3f(0+i, 1.0, 0);
+
+        glNormal3f(0.0, 0.0, 1.0);
         glVertex3f(5+i,0.,1);
         glVertex3f(0+i,0.,1);
         glVertex3f(0+i,1.,1);
         glVertex3f(5+i,1,1);
 
-        glNormal3f(0.0, 0.0, -1.0);   
+        glNormal3f(0.0, 0.0, -1.0);
         glVertex3f(0+i, 0.0, 0);
         glVertex3f(5+i, 0.0, 0);
         glVertex3f(5+i, 1.0, 0);
@@ -262,7 +265,7 @@ void tracks()
 
 }
 
-void parallel_tracks(float track_offset_x, float track_offset_y, float track_offset_z) { 
+void parallel_tracks(float track_offset_x, float track_offset_y, float track_offset_z) {
     glPushMatrix();
         glTranslatef(track_offset_x, 0.0, track_offset_z);
         draw_linear_tracks(TRACK_LENGTH);
@@ -367,7 +370,7 @@ void wagon() {
 
 
 //---------------------------------------------------------------------
-void initialize(void) 
+void initialize(void)
 {
     float grey[4] = {0.2, 0.2, 0.2, 1.0};
     float white[4]  = {1.0, 1.0, 1.0, 1.0};
@@ -412,7 +415,7 @@ void initialize(void)
 
     glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
- 
+
     loadGLTextures();
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_NORMALIZE);
@@ -465,7 +468,7 @@ void linear_train_logic(int value) {
     // TODO: Add condition to slow down where near station, use train1_speed
 
 
-    /* Debugging parallel trains 
+    /* Debugging parallel trains
     std::cout << "Half_track_length: " << half_track_length << endl;
     std::cout << "Train location x: " << train1_location_x << endl;
     */
@@ -505,7 +508,7 @@ void pan(int glut_requires) {
 
 void linear_train(bool train) {
     // terrible coding practice but was sadly running out of time d(-_-)b
-    // double ended train, 'cause it goes 'backwards' too 
+    // double ended train, 'cause it goes 'backwards' too
     int magic_wagon_count = 2;
     int offset = 0;
 
@@ -517,7 +520,7 @@ void linear_train(bool train) {
             glRotatef(180.0, 0, 1, 0);
             engine();
         glPopMatrix();
-        
+
         for (int i = 1; i < magic_wagon_count + 1; i++) {
             offset = i * 20; // wagon length
             glPushMatrix();
@@ -539,7 +542,7 @@ void linear_train(bool train) {
             glRotatef(180.0, 0, 1, 0);
             engine();
         glPopMatrix();
-        
+
         for (int i = 1; i < magic_wagon_count + 1; i++) {
             offset = i * 20; // wagon length
             glPushMatrix();
@@ -560,7 +563,7 @@ void linear_train(bool train) {
 void move_camera(void) {
     if (FPS_MODE) {
         // hide curosr, avoids cursor ghosting
-        glutSetCursor(GLUT_CURSOR_NONE); 
+        glutSetCursor(GLUT_CURSOR_NONE);
         gluLookAt(camera_pov[0], camera_pov[1], camera_pov[2],
                   camera_pov[0] + dist_cam*cos(cam_angle_x*M_PI/180.),
                   camera_pov[1] + dist_cam*sin(cam_angle_y*M_PI/180.),
@@ -723,7 +726,7 @@ void special_keys(int key, int x, int y) {
                 FPS_MODE = false;
                 glFlush();
                 break;
-            
+
             } else {
                 std::copy(std::begin(camera_pov_reset), std::end(camera_pov_reset), std::begin(camera_pov));
                 FPS_MODE = true;
@@ -736,17 +739,21 @@ void special_keys(int key, int x, int y) {
     }
 }
 //-----------------------------------------------------------------
-// END OF KEYBOARD INPUT SECTION  
+// END OF KEYBOARD INPUT SECTION
 // ----------------------------------------------------------------
 
 float convert_to_degrees(float x) {
     return x*M_PI/180.0;
 }
 
-// fps style mouse, no mouse acceleration 
+// fps style mouse, no mouse acceleration
 void mouse_move(int x, int y) {
+    // TODO: Check if mouse is trackpad or mouse. Recently discovered turn
+    // TODO: rate is so slow when on trackpad
+
     int delta_mouse = x- (int)previous_x; // distance
-    float rotation = 15;
+    //float rotation = 15; // externel mouse
+    float rotation = 40; // trackpad
     previous_x = x;
 
     if (delta_mouse > 0) {
@@ -808,7 +815,7 @@ void draw_station(void) {
         glPopMatrix();
     }
 
-    
+
 }
 
 void draw_tunnel(void) {
@@ -927,7 +934,7 @@ void stop_light_logic(int value) {
     STOP_LIGHT = BARRIER_THETA > 45.0 ? false : true;
     glutTimerFunc(20, stop_light_logic, 0);
 }
-    
+
 
 void animate_barrier() {
     glPushMatrix();
@@ -985,7 +992,7 @@ void draw_speakers(int value) {
             double y = sin(angle);
             glVertex2d(x,y);
         }
-        glEnd(); 
+        glEnd();
     glPopMatrix();
 
 }
@@ -1064,14 +1071,14 @@ void drawModel(int model_count) {
         }
 
             // Head
-            glColor3f(1., 0.78, 0.06);		
+            glColor3f(1., 0.78, 0.06);
             glPushMatrix();
               glTranslatef(0, 7.7, 0);
               glutSolidCube(1.4);
             glPopMatrix();
 
             // Torso
-            glColor3f(1., 0., 0.);		
+            glColor3f(1., 0., 0.);
             glPushMatrix();
               glTranslatef(0, 5.5, 0);
               glScalef(3, 3, 1.4);
@@ -1079,7 +1086,7 @@ void drawModel(int model_count) {
             glPopMatrix();
 
             // right leg
-            glColor3f(1., 0., 0.);			
+            glColor3f(1., 0., 0.);
             glPushMatrix();
                 glTranslatef(-0.8, 4, 0);
                 glRotatef((0-humanoid_theta), 1, 0, 0);
@@ -1090,9 +1097,9 @@ void drawModel(int model_count) {
             glPopMatrix();
 
             // left leg
-            glColor3f(0., 0., 1.);			
+            glColor3f(0., 0., 1.);
             glPushMatrix();
-                // rotate by global theta around the pivot point (0.8, 4, 0) 
+                // rotate by global theta around the pivot point (0.8, 4, 0)
                 glTranslatef(0.8, 4, 0);
                 glRotatef(humanoid_theta, 1, 0, 0);
                 glTranslatef(-0.8, -4, 0);
@@ -1102,7 +1109,7 @@ void drawModel(int model_count) {
             glPopMatrix();
 
             // right arm
-            glColor3f(0., 0., 1.);			
+            glColor3f(0., 0., 1.);
             glPushMatrix();
                 // rotate by global theta around the pivote point (-2, 6.5, 0) <right_arm>
                 glTranslatef(-2, 6.5, 0);
@@ -1114,7 +1121,7 @@ void drawModel(int model_count) {
             glPopMatrix();
 
             // left arm
-            glColor3f(1., 0., 0.);			
+            glColor3f(1., 0., 0.);
             glPushMatrix();
                 glTranslatef(2, 6.5, 0);
                 glRotatef((0-humanoid_theta), 1, 0, 0);
@@ -1163,7 +1170,7 @@ void display(void)
 
     // cameras
     move_camera();
-    glLightfv(GL_LIGHT0, GL_POSITION, lgt_pos);     
+    glLightfv(GL_LIGHT0, GL_POSITION, lgt_pos);
 
     // SCALE EVERYTHING UP
     glPushMatrix();
@@ -1174,7 +1181,7 @@ void display(void)
         // circular track and train/wagons
         glPushMatrix();
             glTranslatef(200.0f, 0, 0);
-            tracks();  
+            tracks();
             glPushMatrix();
                 glRotatef(theta, 0, 1, 0);
                 position_engine();
@@ -1271,7 +1278,7 @@ void display(void)
             draw_barrier_body();
             draw_traffic_light();
         glPopMatrix();
-        
+
 
         // humanoid
         srand (static_cast <unsigned> (time(0))); // current time as seed
@@ -1304,25 +1311,25 @@ int main(int argc, char** argv) {
        int input= atoi(argv[1]);
        WAGONS = (4 > input && input >= 1 ) ? input : 1;
     } else {
-        std::cerr << "Usage: ./<program_name> <N> " << USAGE_MESSAGE << endl; 
+        std::cerr << "Usage: ./<program_name> <N> " << USAGE_MESSAGE << endl;
         glFlush();
         return 1;
     }
 
    glutInit(&argc, argv);
    glutInitDisplayMode (GLUT_DOUBLE|GLUT_DEPTH);
-   glutInitWindowSize (WINDOW_WIDTH, WINDOW_HEIGHT); 
+   glutInitWindowSize (WINDOW_WIDTH, WINDOW_HEIGHT);
    glutInitWindowPosition (0, 0);
    window_id = glutCreateWindow ("github.com/C-Kenny | Mouse to look, WASD to move!");
 
    initialize ();
 
-   glutDisplayFunc(display); 
+   glutDisplayFunc(display);
    glutIgnoreKeyRepeat(0);
    glutSpecialFunc(special_keys);
    glutKeyboardFunc(user_input);
    glutKeyboardUpFunc(user_input_up);
-   
+
    // control logic
    glutTimerFunc(10, pan, 0);
    glutTimerFunc(20, rotate_train, 0);
