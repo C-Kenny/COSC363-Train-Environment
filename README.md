@@ -1,10 +1,20 @@
 # COSC363-Train-Environment
 
+## What is it?
+Graphics project made with C++/OpenGL/glut/glew
+
+## Can I see a demo without spending 4 hours getting glut setup?
+[.webm demo hosted by webmshare](https://webmshare.com/play/1MGxx)
+[.webm demo hosted by me](http://carlkenny.com/media/train_c++_demo.webm)
+
+
+
 ## TODO:
-- Break into logic and view sections
-- Look into newer OpenGL
-- Learn C++, so it doesn't look like C pulled straight from an embedded system
-- Refactor (WTF it's in 1 file 1400 LOC file lol)
-- Add object collisions for barrier arms
-- Add screenshots
-- Investigate difficult to track-down but existing mouse bug where looking up too high causes weird math to fail
+- Extra features:
+..-Add object collisions for barrier armsk
+
+- Refactor:
+..- Break into logic and view sections
+
+- Fix bugs:
+..- Investigate existing mouse bug where looking up too high creates mouse issues
