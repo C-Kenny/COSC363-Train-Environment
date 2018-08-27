@@ -13,7 +13,12 @@
 
 #include <iostream>
 #include <fstream>
+
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#else
 #include <GL/freeglut.h>
+#endif
 using namespace std;
 
 void loadTGA(string filename)
@@ -30,7 +35,7 @@ void loadTGA(string filename)
 	}
 	file.read (&id, 1);
 	file.read (&cmap, 1);
-	file.read (&imgtype, 1);	
+	file.read (&imgtype, 1);
 	if(imgtype != 2 && imgtype != 3 )   //2= colour (uncompressed),  3 = greyscale (uncompressed)
 	{
 		cout << "*** Incompatible image type: " << (int)imgtype << endl;
@@ -43,7 +48,7 @@ void loadTGA(string filename)
 	//Image specification
 	file.read ((char*)&s_garb, 2);  //x origin
 	file.read ((char*)&s_garb, 2);  //y origin
-	file.read ((char*)&wid, 2);     //image width								    
+	file.read ((char*)&wid, 2);     //image width
 	file.read ((char*)&hgt, 2);     //image height
 	file.read (&bpp, 1);     //bits per pixel
 	file.read (&c_garb, 1);  //img descriptor
@@ -74,7 +79,7 @@ void loadTGA(string filename)
 	         glTexImage2D(GL_TEXTURE_2D, 0, 4, wid, hgt, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData);
 	         break;
      }
-     delete imageData;	         	         
+     delete imageData;
 }
 
 #endif

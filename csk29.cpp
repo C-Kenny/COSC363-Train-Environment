@@ -13,7 +13,14 @@
 #include <math.h>
 #include <random>
 #include <string>
-#include <GL/freeglut.h>
+
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
+
+// #include <GL/freeglut.h>
 #include "loadTGA.h" // load textures
 #include <stdlib.h>
 
