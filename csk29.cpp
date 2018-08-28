@@ -48,7 +48,7 @@ bool FPS_MODE = true;
 
 // wagons
 float WAGON_WIDTH = 10;
-int WAGONS = 1;         // Can also be set in main(), via argv[1]
+int WAGONS = 1; // Can also be set in main(), via argv[1]
 
 // tunnels
 float TUNNEL_OFFSET_X = 40;
@@ -65,7 +65,7 @@ float TRACK_OFFSET_X = 00.0;
 float TRACK_OFFSET_Y = 0.0;
 float TRACK_OFFSET_Z = 180.0;
 
-// trains (make one train, copy and translate it
+// trains (make one train, copy and translate it)
 float train0_location_x = 0.0;
 float train0_location_z = TRACK_OFFSET_Z + (WAGON_WIDTH/2.0);     // half wagon
 float train0_speed = 3;
@@ -94,7 +94,7 @@ int MODEL_COUNT = 10;
 float RAND_HI = 40;
 float RAND_LOW = 0.0;
 float RAND_MID = (RAND_HI + RAND_LOW) / 2;
-float humanoid_theta = 20;          // Degrees
+float humanoid_theta = 20;  // Degrees
 float man_pos;
 float random_float;
 bool rising_theta = true;
@@ -114,25 +114,19 @@ float BARRIER_R = 1.0;
 float BARRIER_G = 1.0;
 float BARRIER_B = 1.0;
 
+// fps and other metrics
+clock_t current_ticks, delta_ticks;
+clock_t fps = 0;
+
 void loadGLTextures()               // Load bitmaps And Convert To Textures
 {
     glGenTextures(16, txId);        // Create texture ids
 
     glBindTexture(GL_TEXTURE_2D, txId[0]);
-    //loadTGA("textures/grass1.tga");
     loadTGA("grass1.tga");
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat grass
-
-    /*
-     * TODO: Investigate where these files were sourced from and find them
-    glBindTexture(GL_TEXTURE_2D, txId[1]);
-    loadTGA("metal.tga");
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat metal
-    */
 
     glBindTexture(GL_TEXTURE_2D, txId[2]);
     loadTGA("barrier_body.tga");
@@ -145,14 +139,6 @@ void loadGLTextures()               // Load bitmaps And Convert To Textures
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat brick
-
-    /*
-    glBindTexture(GL_TEXTURE_2D, txId[4]);
-    loadTGA("cobble.tga");
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat cobble
-    */
 
     glBindTexture(GL_TEXTURE_2D, txId[5]);
     loadTGA("stone.tga");
@@ -170,9 +156,9 @@ void floor()
 	float black[4] = {0};
 	glColor4f(0.1, 0.1, 0.1, 1.0);
 	glNormal3f(0.0, 1.0, 0.0);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, black);  //No specular reflections from the floor.
+	glMaterialfv(GL_FRONT, GL_SPECULAR, black);  // No specular reflections from the floor.
 
-	//The floor is made up of several largish squares on a GLOBALLY DEFINED grid. Each square has a unit size.
+	// The floor is made up of several largish squares on a GLOBALLY DEFINED grid. Each square has a unit size.
 	glBegin(GL_QUADS);
 	for(int i = -FLOOR; i < FLOOR; i += 10)
 	{
@@ -235,7 +221,6 @@ void track(float radius)
 
 void draw_linear_tracks(int number_of_bricks) {
     glBegin(GL_QUADS);
-    //glColor4f(0.5, 0.0, 0.4, 1.0);
     glColor4f(1.0, 1.0, 1.0, 0.8);
 
     // code stolen from track() function given by lecturer
@@ -382,13 +367,6 @@ void initialize(void)
     float grey[4] = {0.2, 0.2, 0.2, 1.0};
     float white[4]  = {1.0, 1.0, 1.0, 1.0};
 
-    /*
-    float red[4] = {0.15, 0.0, 0.0, 1.0};
-    float green[4] = {0.0, 0.15, 0.0, 1.0};
-    float clear[4] = {0.0, 0.0, 0.0, 1.0};
-    */
-
-
 	q = gluNewQuadric();
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
@@ -402,20 +380,6 @@ void initialize(void)
     glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 0.01);
     glLightfv(GL_LIGHT1, GL_AMBIENT, grey);
     glLightfv(GL_LIGHT1, GL_SPECULAR, white);
-
-    /*
-    // stop light red
-    glEnable(GL_LIGHT2);
-    glLightfv(GL_LIGHT2, GL_AMBIENT, red);
-    glLightfv(GL_LIGHT2, GL_DIFFUSE, white);
-    glLightfv(GL_LIGHT2, GL_SPECULAR, white);
-
-    // stop light green
-    glEnable(GL_LIGHT3);
-    glLightfv(GL_LIGHT3, GL_AMBIENT, green);
-    glLightfv(GL_LIGHT3, GL_DIFFUSE, white);
-    glLightfv(GL_LIGHT3, GL_SPECULAR, white);
-    */
 
     glMaterialfv(GL_FRONT, GL_SPECULAR, white);
     glMaterialf(GL_FRONT, GL_SHININESS, 50);
@@ -472,13 +436,6 @@ void rotate_train(int value) {
 
 void linear_train_logic(int value) {
     float half_track_length = TRACK_LENGTH/2.0 - 40;
-    // TODO: Add condition to slow down where near station, use train1_speed
-
-
-    /* Debugging parallel trains
-    std::cout << "Half_track_length: " << half_track_length << endl;
-    std::cout << "Train location x: " << train1_location_x << endl;
-    */
 
     glFlush();
     if (TRAIN1_DECREASING) {
@@ -569,7 +526,7 @@ void linear_train(bool train) {
 
 void move_camera(void) {
     if (FPS_MODE) {
-        // hide curosr, avoids cursor ghosting
+        // hide cursor, avoids cursor ghosting
         glutSetCursor(GLUT_CURSOR_NONE);
         gluLookAt(camera_pov[0], camera_pov[1], camera_pov[2],
                   camera_pov[0] + dist_cam*cos(cam_angle_x*M_PI/180.),
@@ -586,30 +543,6 @@ void move_camera(void) {
 }
 
 
-
-//-----------------------------------------------------------------
-// THIS SECTION HANDLES 2-key 'rollover' of the user's WASD strokes
-// NOT IMPLEMENTED BUT WOULD HAVE BEEN NICE TO MOVE IN DIAGONALS
-// ----------------------------------------------------------------
-void keyboard_w(void) {
-    camera_pov[0] += 2.*cos(cam_angle_x*M_PI/180.);
-    camera_pov[2] += 2.*sin(cam_angle_x*M_PI/180.);
-}
-
-void keyboard_a(void) {
-    camera_pov[0] += 2.*sin(cam_angle_x*M_PI/180.);
-    camera_pov[2] += -2.*cos(cam_angle_x*M_PI/180.);
-}
-
-void keyboard_s(void) {
-    camera_pov[0] -= 2.*cos(cam_angle_x*M_PI/180.);
-    camera_pov[2] -= 2.*sin(cam_angle_x*M_PI/180.);
-}
-
-void keyboard_d(void) {
-    camera_pov[0] += -2.*sin(cam_angle_x*M_PI/180.);
-    camera_pov[2] += 2.*cos(cam_angle_x*M_PI/180.);
-}
 
 
 bool input_same_as_last(unsigned char key) {
@@ -629,67 +562,6 @@ void user_input_up(unsigned char key, int x, int y) {
         keyboard_down_count -= 1;
     }
 }
-
-/*
- * Below is where I started to process multiple WASD
- * keyboard strokes
- *
-void user_input(unsigned char key, int x, int y) {
-    keyboard_down[key] = true;
-
-    if (not input_same_as_last(key)) {
-        keyboard_down_count += 1;
-    }
-
-    std::cout << "Keys down: " << keyboard_down_count;
-    glFlush();
-
-    if (keyboard_down_count == 2) {
-        if (keyboard_down['w']) {
-            if (keyboard_down['a']) {
-                std::cout << "wa";
-                keyboard_w();
-                keyboard_a();
-                glFlush();
-            } else if (keyboard_down['d']) {
-                std::cout << "wd";
-                keyboard_w();
-                keyboard_d();
-                glFlush();
-            } else {
-                // last key wasn't WASD
-                std::cout << "w";
-                keyboard_w();
-                glFlush();
-            }
-        }
-    } else if (keyboard_down_count >= 3) {
-        std::cout << "Are you a QA tester? Do you hate your keyboard? Only 2 keys or less at once, please\n\n";
-        glFlush();
-    } else {
-        // single key press
-        switch(key) {
-            case 'w':
-                camera_pov[0] += 2.*cos(cam_angle_x*M_PI/180.);
-                camera_pov[2] += 2.*sin(cam_angle_x*M_PI/180.);
-                break;
-            case 'a':
-                camera_pov[0] += 2.*sin(cam_angle_x*M_PI/180.);
-                camera_pov[2] += -2.*cos(cam_angle_x*M_PI/180.);
-                break;
-            case 's':
-                camera_pov[0] -= 2.*cos(cam_angle_x*M_PI/180.);
-                camera_pov[2] -= 2.*sin(cam_angle_x*M_PI/180.);
-                break;
-            case 'd':
-                camera_pov[0] += -2.*sin(cam_angle_x*M_PI/180.);
-                camera_pov[2] += 2.*cos(cam_angle_x*M_PI/180.);
-                break;
-        }
-
-    }
-}
-*/
 
 void user_input(unsigned char key, int x, int y) {
     switch(key) {
@@ -1168,6 +1040,8 @@ void walk(int value) {
 //-------------------------------------------------------------------
 void display(void)
 {
+    current_ticks = clock();
+
     float lgt_pos[] = {0.0f, 50.0f, 0.0f, 1.0f};    //light0 position (directly above the origin)
 
     glClear (GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -1306,6 +1180,11 @@ void display(void)
     glPopMatrix();
 
     glutSwapBuffers();   //Useful for animation
+
+    delta_ticks = clock() - current_ticks;
+    if (delta_ticks > 0)
+        fps = CLOCKS_PER_SEC / delta_ticks;
+    cout << fps << endl;
 }
 
 
@@ -1324,7 +1203,8 @@ int main(int argc, char** argv) {
     }
 
    glutInit(&argc, argv);
-   glutInitDisplayMode (GLUT_DOUBLE|GLUT_DEPTH);
+   //glutInitDisplayMode (GLUT_DOUBLE|GLUT_DEPTH);
+   glutInitDisplayMode (GLUT_DOUBLE|GLUT_DEPTH| GLUT_DOUBLE);
    glutInitWindowSize (WINDOW_WIDTH, WINDOW_HEIGHT);
    glutInitWindowPosition (0, 0);
    window_id = glutCreateWindow ("github.com/C-Kenny | Mouse to look, WASD to move!");
