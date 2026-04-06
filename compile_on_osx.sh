@@ -1,2 +1,2 @@
 # OSX High Seria
-g++ csk29.cpp input_controller.cpp animation_system.cpp renderer.cpp barrier_renderer.cpp visualizer_system.cpp -o gl -std=c++0x -Wno-deprecated -framework OpenGL -framework GLUT -framework Cocoa
+g++ src/csk29.cpp src/input_controller.cpp src/animation_system.cpp src/renderer.cpp src/barrier_renderer.cpp src/visualizer_system.cpp -Iinclude -o gl -std=c++0x -Wno-deprecated -framework OpenGL -framework GLUT -framework Cocoa

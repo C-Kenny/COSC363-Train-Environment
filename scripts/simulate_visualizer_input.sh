@@ -2,7 +2,9 @@
 # Generates synthetic low/mid/high/beat values for visualizer_input.txt.
 set -euo pipefail
 
-target_file="visualizer_input.txt"
+cd "$(dirname "$0")/.."
+
+target_file="data/visualizer_input.txt"
 phase=0
 
 while true; do

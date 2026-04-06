@@ -5,7 +5,7 @@
 
 class VisualizerSystem {
 public:
-    explicit VisualizerSystem(const std::string& input_path = "visualizer_input.txt");
+    explicit VisualizerSystem(const std::string& input_path = "data/visualizer_input.txt");
 
     void update(float dt_seconds);
 

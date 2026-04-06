@@ -7,7 +7,7 @@ This refactor introduces a separation of concerns so each part of the program ha
 
 ## New modules
 
-### world_state.h
+### include/world_state.h
 Holds runtime state in one place.
 
 Examples:
@@ -19,7 +19,7 @@ Design value:
 - Makes ownership of mutable data explicit
 - Avoids scattered state edits in unrelated code paths
 
-### input_controller.h / input_controller.cpp
+### include/input_controller.h / src/input_controller.cpp
 Owns input-to-state transformations.
 
 Responsibilities:
@@ -31,7 +31,7 @@ Design value:
 - Input policy is centralized
 - Easier to tune controls without touching render code
 
-### animation_system.h / animation_system.cpp
+### include/animation_system.h / src/animation_system.cpp
 Owns time-step logic.
 
 Responsibilities:
@@ -43,7 +43,7 @@ Design value:
 - Animation math is isolated from drawing
 - Timer callbacks become thin and predictable
 
-### renderer.h / renderer.cpp
+### include/renderer.h / src/renderer.cpp
 Owns camera matrix setup.
 
 Responsibilities:
@@ -52,11 +52,11 @@ Responsibilities:
 Design value:
 - Rendering decisions can evolve independently from gameplay and input
 
-### visualizer_system.h / visualizer_system.cpp
+### include/visualizer_system.h / src/visualizer_system.cpp
 Owns audio-band ingestion and beat/pulse derivation.
 
 Responsibilities:
-- Read low/mid/high/beat values from [visualizer_input.txt](visualizer_input.txt)
+- Read low/mid/high/beat values from [data/visualizer_input.txt](data/visualizer_input.txt)
 - Provide smoothed band values to rendering code
 - Detect beat pulses (explicit beat hint and low-band peak fallback)
 - Provide procedural fallback when no external data is present
@@ -66,9 +66,9 @@ Design value:
 - Makes it easy to swap file-based input for microphone/system-loopback later
 - Stabilizes visuals with smoothing and pulse decay
 
-### system_audio_to_visualizer.py (bridge)
+### scripts/system_audio_to_visualizer.py (bridge)
 Linux helper process that captures system output audio from sink monitor (`pactl` + `parec`),
-extracts low/mid/high + beat in near real-time, and writes values into [visualizer_input.txt](visualizer_input.txt).
+extracts low/mid/high + beat in near real-time, and writes values into [data/visualizer_input.txt](data/visualizer_input.txt).
 
 Design value:
 - External process boundary keeps OpenGL render loop simple.
@@ -92,9 +92,9 @@ GLUT callbacks now delegate to modules. Thin callbacks reduce bug surface area a
 
 ## Build impact
 Build scripts now compile multiple translation units:
-- csk29.cpp
-- input_controller.cpp
-- animation_system.cpp
-- renderer.cpp
+- src/csk29.cpp
+- src/input_controller.cpp
+- src/animation_system.cpp
+- src/renderer.cpp
 
 No runtime behavior change is intended; this is a structural refactor focused on maintainability.

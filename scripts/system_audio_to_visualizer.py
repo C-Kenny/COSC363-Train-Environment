@@ -13,7 +13,7 @@ try:
 except ImportError as exc:  # pragma: no cover
     raise SystemExit(
         "numpy is required. Install with: pip install numpy\n"
-        "or run: ./run_system_audio_visualizer.sh"
+        "or run: ./scripts/run_system_audio_visualizer.sh"
     ) from exc
 
 
@@ -73,7 +73,7 @@ def write_values(path: str, low: float, mid: float, high: float, beat: float) ->
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Output-audio to visualizer bands")
-    parser.add_argument("--output", default="visualizer_input.txt")
+    parser.add_argument("--output", default="data/visualizer_input.txt")
     parser.add_argument("--rate", type=int, default=44100)
     parser.add_argument("--chunk", type=int, default=2048)
     parser.add_argument("--source", default="", help="Override source (otherwise auto-select monitor)")

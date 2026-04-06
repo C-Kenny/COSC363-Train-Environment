@@ -27,11 +27,11 @@ Graphics project made with C++/OpenGL/glut/glew
 This project has been partially modernized into an OOP/module architecture to make future changes safer and faster.
 
 ### New files
-- world_state.h
-- input_controller.h / input_controller.cpp
-- animation_system.h / animation_system.cpp
-- renderer.h / renderer.cpp
-- ARCHITECTURE.md
+- include/world_state.h
+- include/input_controller.h / src/input_controller.cpp
+- include/animation_system.h / src/animation_system.cpp
+- include/renderer.h / src/renderer.cpp
+- docs/ARCHITECTURE.md
 
 ### What changed and why
 - State was centralized into WorldState so mutable runtime data is no longer spread across unrelated logic.
@@ -42,11 +42,11 @@ This project has been partially modernized into an OOP/module architecture to ma
 ### Build scripts
 Both compile scripts now compile multiple source files instead of one monolithic cpp.
 
-See ARCHITECTURE.md for a teaching-oriented walkthrough.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a teaching-oriented walkthrough.
 
 ## Music Visualizer Mode (new)
 
-The scene now reacts to four values read from [visualizer_input.txt](visualizer_input.txt):
+The scene now reacts to four values read from [data/visualizer_input.txt](data/visualizer_input.txt):
 
 1. `low` in `[0, 1]`
 2. `mid` in `[0, 1]`
@@ -72,11 +72,11 @@ If no external file updates are provided, the app uses a procedural fallback sig
 Run the app in one terminal, and in another terminal run:
 
 ```bash
-chmod +x ./simulate_visualizer_input.sh
-./simulate_visualizer_input.sh
+chmod +x ./scripts/simulate_visualizer_input.sh
+./scripts/simulate_visualizer_input.sh
 ```
 
-This continuously updates [visualizer_input.txt](visualizer_input.txt) with synthetic band values.
+This continuously updates [data/visualizer_input.txt](data/visualizer_input.txt) with synthetic band values.
 
 ### Real system-output audio (Spotify / YouTube / Firefox)
 
@@ -84,8 +84,8 @@ This project now includes a Linux output-audio bridge that reads the default sin
 (not microphone input) and converts it to low/mid/high/beat values.
 
 Files:
-- [system_audio_to_visualizer.py](system_audio_to_visualizer.py)
-- [run_system_audio_visualizer.sh](run_system_audio_visualizer.sh)
+- [scripts/system_audio_to_visualizer.py](scripts/system_audio_to_visualizer.py)
+- [scripts/run_system_audio_visualizer.sh](scripts/run_system_audio_visualizer.sh)
 
 Run flow:
 
@@ -99,8 +99,8 @@ Run flow:
 2. In terminal B:
 
 ```bash
-chmod +x ./run_system_audio_visualizer.sh
-./run_system_audio_visualizer.sh
+chmod +x ./scripts/run_system_audio_visualizer.sh
+./scripts/run_system_audio_visualizer.sh
 ```
 
 That bridge auto-selects your default sink monitor using `pactl`, so any desktop output

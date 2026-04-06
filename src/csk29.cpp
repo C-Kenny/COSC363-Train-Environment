@@ -128,25 +128,25 @@ void loadGLTextures()               // Load bitmaps And Convert To Textures
     glGenTextures(16, txId);        // Create texture ids
 
     glBindTexture(GL_TEXTURE_2D, txId[0]);
-    loadTGA("grass1.tga");
+    loadTGA("assets/textures/grass1.tga");
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat grass
 
     glBindTexture(GL_TEXTURE_2D, txId[2]);
-    loadTGA("barrier_body.tga");
+    loadTGA("assets/textures/barrier_body.tga");
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat stone
 
     glBindTexture(GL_TEXTURE_2D, txId[3]);
-    loadTGA("bricks.tga");
+    loadTGA("assets/textures/bricks.tga");
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat brick
 
     glBindTexture(GL_TEXTURE_2D, txId[5]);
-    loadTGA("stone.tga");
+    loadTGA("assets/textures/stone.tga");
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // repeat stone
