@@ -79,7 +79,7 @@ void loadTGA(string filename)
 	         glTexImage2D(GL_TEXTURE_2D, 0, 4, wid, hgt, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData);
 	         break;
      }
-     delete imageData;
+	delete [] imageData;
 }
 
 #endif
