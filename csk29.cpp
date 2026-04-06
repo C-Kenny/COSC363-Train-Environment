@@ -5,6 +5,7 @@
 //  ========================================================================
 
 #include <cstdlib>
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <ctime>
@@ -12,7 +13,15 @@
 #include <fstream>
 #include <math.h>
 #include <random>
+#include <vector>
 #include <string>
+
+#include "animation_system.h"
+#include "barrier_renderer.h"
+#include "input_controller.h"
+#include "renderer.h"
+#include "visualizer_system.h"
+#include "world_state.h"
 
 #ifdef __APPLE__
 #include <GLUT/glut.h>
@@ -36,19 +45,16 @@ int window_id = 0;  // assigned in main(), used to close window
 string USAGE_MESSAGE = "N (where N is the count of desired wagons)\n";
 
 // Camera
-float camera_pov[] = {0, 14.0, 200, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0};
-float camera_pov_reset[] = {0, 14.0, 200, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0};
-float cam_angle_x = 90.0;
-float cam_angle_y = 30.0;
-float dist_cam = 150.0;
-float pan_radius = 800;
-float pan_height = 70;
-float pan_angle = 0.0;
-bool FPS_MODE = true;
+
+namespace {
+constexpr float kPi = 3.14159265f;
+constexpr float kDegToRad = kPi / 180.0f;
+}
 
 // wagons
 float WAGON_WIDTH = 10;
 int WAGONS = 1; // Can also be set in main(), via argv[1]
+std::vector<float> wagon_colors;
 
 // tunnels
 float TUNNEL_OFFSET_X = 40;
@@ -57,7 +63,6 @@ float TUNNEL_OFFSET_X = 40;
 float PATH_WIDTH = 50;
 
 // traffic light
-bool STOP_LIGHT = true;
 
 // tracks
 int TRACK_LENGTH = 800;
@@ -66,19 +71,6 @@ float TRACK_OFFSET_Y = 0.0;
 float TRACK_OFFSET_Z = 180.0;
 
 // trains (make one train, copy and translate it)
-float train0_location_x = 0.0;
-float train0_location_z = TRACK_OFFSET_Z + (WAGON_WIDTH/2.0);     // half wagon
-float train0_speed = 3;
-bool TRAIN0_DECREASING = false;
-
-float train1_location_x = 0.0;
-float train1_location_z = -TRACK_OFFSET_Z + (WAGON_WIDTH/2.0);    // half wagon
-float train1_speed = 3;
-bool TRAIN1_DECREASING = false;
-
-// Mouse
-int previous_x = 0;
-int previous_y = 0;
 
 // init window dimensions, laptop friendly
 int WINDOW_WIDTH = 800;
@@ -103,9 +95,6 @@ bool rising_walk = true;
 // barrier logic
 float POS_Z_CUTOFF = TRACK_OFFSET_Z + 30;
 float NEG_Z_CUTOFF = -TRACK_OFFSET_Z - 30;
-float BARRIER_THETA = 1;
-
-bool BARRIER_LOWERING = false;
 float POS_Z_CUTOFF_BARRIER = TRACK_OFFSET_Z - 10;
 float NEG_Z_CUTOFF_BARRIER = -TRACK_OFFSET_Z + 15;
 
@@ -113,10 +102,26 @@ float NEG_Z_CUTOFF_BARRIER = -TRACK_OFFSET_Z + 15;
 float BARRIER_R = 1.0;
 float BARRIER_G = 1.0;
 float BARRIER_B = 1.0;
+WorldState g_state;
+InputController g_input(g_state);
+AnimationSystem g_animation(g_state);
+VisualizerSystem g_visualizer;
+clock_t last_visualizer_update_ticks = 0;
 
 // fps and other metrics
 clock_t current_ticks, delta_ticks;
 clock_t fps = 0;
+clock_t last_fps_log_ticks = 0;
+
+void init_wagon_colors() {
+    const int channels = 3;
+    wagon_colors.resize((WAGONS + 1) * channels);
+    for (int i = 0; i <= WAGONS; ++i) {
+        wagon_colors[i * channels] = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+        wagon_colors[i * channels + 1] = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+        wagon_colors[i * channels + 2] = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+    }
+}
 
 void loadGLTextures()               // Load bitmaps And Convert To Textures
 {
@@ -257,7 +262,7 @@ void tracks()
 
 }
 
-void parallel_tracks(float track_offset_x, float track_offset_y, float track_offset_z) {
+void parallel_tracks(float track_offset_x, float /*track_offset_y*/, float track_offset_z) {
     glPushMatrix();
         glTranslatef(track_offset_x, 0.0, track_offset_z);
         draw_linear_tracks(TRACK_LENGTH);
@@ -343,12 +348,13 @@ void engine()
 }
 
 //--- A rail wagon ---------------------------------------------------
-void wagon() {
+void wagon(int wagon_index) {
     base();
-    // Randomly color wagons
-    float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX/1.0);
-    float g = static_cast <float> (rand()) / static_cast <float> (RAND_MAX/1.0);
-    float b = static_cast <float> (rand()) / static_cast <float> (RAND_MAX/1.0);
+    const int channels = 3;
+    const int color_index = wagon_index * channels;
+    float r = wagon_colors[color_index];
+    float g = wagon_colors[color_index + 1];
+    float b = wagon_colors[color_index + 2];
 
     //glColor4f(0.0, 1.0, 1.0, 1.0);
     glColor4f(r, g, b, 1.0);
@@ -422,65 +428,47 @@ void position_wagon(void)
         glPushMatrix();
             glRotatef((i*10.5), 0, 1, 0);
             glTranslatef(0, 1, -120);
-            wagon();
+            wagon(i);
         glPopMatrix();
     }
 }
 
 //-------------------------------------------------------------------
 void rotate_train(int value) {
+    (void)value;
     glutPostRedisplay();
     theta--;
     glutTimerFunc(20, rotate_train, 0); // 10ms
 }
 
 void linear_train_logic(int value) {
-    float half_track_length = TRACK_LENGTH/2.0 - 40;
-
-    glFlush();
-    if (TRAIN1_DECREASING) {
-        // move in the positive direction
-        if (train1_location_x <= -half_track_length) {
-            TRAIN1_DECREASING = false;
-        } else {
-            train1_location_x -= train1_speed;
-            train0_location_x += train0_speed;
-        }
-    } else {
-        if (train1_location_x > half_track_length) {
-            TRAIN1_DECREASING = true;
-        } else {
-            train1_location_x += train1_speed;
-            train0_location_x -= train0_speed;
-        }
-    }
+    (void)value;
+    g_animation.linearTrainStep(static_cast<float>(TRACK_LENGTH));
     glutPostRedisplay();
     glutTimerFunc(30, linear_train_logic, 0);
 }
 
 void pan(int glut_requires) {
-    if (pan_angle >= 360) {
-        pan_angle = 0;
-    }
-    if (FPS_MODE == false) {
-        pan_angle+=0.5;
+    (void)glut_requires;
+    g_animation.panStep();
+    if (!g_state.fps_mode) {
         glutPostRedisplay();
     }
     glutTimerFunc(30, pan, 0);
 }
 
 
-void linear_train(bool train) {
+void draw_linear_train_pair(float train_location_x, float train_location_z) {
     // terrible coding practice but was sadly running out of time d(-_-)b
     // double ended train, 'cause it goes 'backwards' too
     int magic_wagon_count = 2;
     int offset = 0;
 
     glPushMatrix();
-        glTranslatef(train1_location_x, 0, 0);
+        glTranslatef(train_location_x, 0, 0);
 
         glPushMatrix();
-            glTranslatef(-58.0, 0, train1_location_z); // space
+            glTranslatef(-58.0, 0, train_location_z); // space
             glRotatef(180.0, 0, 1, 0);
             engine();
         glPopMatrix();
@@ -488,58 +476,26 @@ void linear_train(bool train) {
         for (int i = 1; i < magic_wagon_count + 1; i++) {
             offset = i * 20; // wagon length
             glPushMatrix();
-                glTranslatef(-54+offset, 0, train1_location_z);
-                wagon();
+                glTranslatef(-54+offset, 0, train_location_z);
+                wagon(i);
             glPopMatrix();
         }
         glPushMatrix();
-            glTranslatef(8.0, 0, train1_location_z); // space
+            glTranslatef(8.0, 0, train_location_z); // space
             engine();
         glPopMatrix();
     glPopMatrix();
+}
 
-    glPushMatrix();
-        glTranslatef(train0_location_x, 0, 0);
-
-        glPushMatrix();
-            glTranslatef(-58.0, 0, train0_location_z); // space
-            glRotatef(180.0, 0, 1, 0);
-            engine();
-        glPopMatrix();
-
-        for (int i = 1; i < magic_wagon_count + 1; i++) {
-            offset = i * 20; // wagon length
-            glPushMatrix();
-                glTranslatef(-54+offset, 0, train0_location_z);
-                wagon();
-            glPopMatrix();
-        }
-        glPushMatrix();
-            glTranslatef(8.0, 0, train0_location_z); // space
-            engine();
-        glPopMatrix();
-    glPopMatrix();
-
+void linear_train() {
+    draw_linear_train_pair(g_state.train1_location_x, g_state.train1_location_z);
+    draw_linear_train_pair(g_state.train0_location_x, g_state.train0_location_z);
     glutPostRedisplay();
 }
 
 
 void move_camera(void) {
-    if (FPS_MODE) {
-        // hide cursor, avoids cursor ghosting
-        glutSetCursor(GLUT_CURSOR_NONE);
-        gluLookAt(camera_pov[0], camera_pov[1], camera_pov[2],
-                  camera_pov[0] + dist_cam*cos(cam_angle_x*M_PI/180.),
-                  camera_pov[1] + dist_cam*sin(cam_angle_y*M_PI/180.),
-                  camera_pov[2] + dist_cam*sin(cam_angle_x*M_PI/180.),
-                  0.0, 1.0, 0.0);
-
-        // LOCK CURSOR IN CENTER
-        glutWarpPointer(glutGet(GLUT_WINDOW_WIDTH) / 2, glutGet(GLUT_WINDOW_HEIGHT) / 2);
-    } else {
-        gluLookAt(pan_radius*sin(pan_angle*M_PI/180.0), pan_height, pan_radius*cos(pan_angle*M_PI/180.0), 0,
-                pan_height, 0, 0.0, 1.0, 0.0);
-    }
+    Renderer::applyCamera(g_state, kDegToRad);
 }
 
 
@@ -556,6 +512,8 @@ bool input_same_as_last(unsigned char key) {
 
 // Modify global keyboard array for release of key
 void user_input_up(unsigned char key, int x, int y) {
+    (void)x;
+    (void)y;
     keyboard_down[key] = false;
 
     if (not input_same_as_last(key)) {
@@ -564,25 +522,19 @@ void user_input_up(unsigned char key, int x, int y) {
 }
 
 void user_input(unsigned char key, int x, int y) {
-    switch(key) {
-        case 'w':
-            camera_pov[0] += 3.*cos(cam_angle_x*M_PI/180.);
-            camera_pov[2] += 3.*sin(cam_angle_x*M_PI/180.);
-            break;
-        case 'a':
-            camera_pov[0] += 3.*sin(cam_angle_x*M_PI/180.);
-            camera_pov[2] += -3.*cos(cam_angle_x*M_PI/180.);
-            break;
-        case 's':
-            camera_pov[0] -= 3.*cos(cam_angle_x*M_PI/180.);
-            camera_pov[2] -= 3.*sin(cam_angle_x*M_PI/180.);
-            break;
-        case 'd':
-            camera_pov[0] += -3.*sin(cam_angle_x*M_PI/180.);
-            camera_pov[2] += 3.*cos(cam_angle_x*M_PI/180.);
-            break;
+    (void)x;
+    (void)y;
+
+    if (key == 27) {  // Esc: release cursor lock
+        g_input.releaseCursorLock();
+        return;
+    }
+    if (key == '\t') {  // Tab: recapture cursor lock
+        g_input.lockCursor();
+        return;
     }
 
+    g_input.handleMovementKey(key, kDegToRad);
 }
 
 /*
@@ -590,6 +542,8 @@ void user_input(unsigned char key, int x, int y) {
  * F3:  Pan
  */
 void special_keys(int key, int x, int y) {
+    (void)x;
+    (void)y;
     switch (key) {
         case GLUT_KEY_F1:
             glutDestroyWindow(window_id);
@@ -601,14 +555,13 @@ void special_keys(int key, int x, int y) {
             break;
 
         case GLUT_KEY_F3:
-            if (FPS_MODE) {
-                FPS_MODE = false;
+            if (g_state.fps_mode) {
+                g_input.togglePanMode();
                 glFlush();
                 break;
 
             } else {
-                std::copy(std::begin(camera_pov_reset), std::end(camera_pov_reset), std::begin(camera_pov));
-                FPS_MODE = true;
+                g_input.togglePanMode();
                 break;
             }
 
@@ -621,33 +574,21 @@ void special_keys(int key, int x, int y) {
 // END OF KEYBOARD INPUT SECTION
 // ----------------------------------------------------------------
 
-float convert_to_degrees(float x) {
-    return x*M_PI/180.0;
-}
-
 // fps style mouse, no mouse acceleration
 void mouse_move(int x, int y) {
     // TODO: Check if mouse is trackpad or mouse. Recently discovered turn
     // TODO: rate is so slow when on trackpad
 
-    int delta_mouse = x- (int)previous_x; // distance
-    //float rotation = 15; // externel mouse
-    float rotation = 40; // trackpad
-    previous_x = x;
-
-    if (delta_mouse > 0) {
-        cam_angle_x += convert_to_degrees(rotation -5);
-    } else if (delta_mouse < 0) {
-        cam_angle_x -= convert_to_degrees(rotation - 5);
-    }
-
-    int delta_mouse_y = y - (int)previous_y; // distance
-    previous_y = y;
-    if (delta_mouse_y > 0) {
-        cam_angle_y -= convert_to_degrees(rotation);
-    } else if (delta_mouse_y < 0) {
-        cam_angle_y += convert_to_degrees(rotation);
-    }
+    const int center_x = glutGet(GLUT_WINDOW_WIDTH) / 2;
+    const int center_y = glutGet(GLUT_WINDOW_HEIGHT) / 2;
+    g_input.mouseMove(
+        x,
+        y,
+        40.0f,
+        kDegToRad,
+        g_state.fps_mode && g_state.cursor_locked,
+        center_x,
+        center_y);
 }
 
 
@@ -681,16 +622,14 @@ void draw_station(void) {
         glPushMatrix();
             glTranslatef(i, 1, TRACK_OFFSET_Z + 90);
             glRotatef(270.0, 1, 0, 0);
-            GLUquadricObj *quadObject = gluNewQuadric();
-            gluCylinder(quadObject, 10, 1, 59, 10, 10);
+            gluCylinder(q, 10, 1, 59, 10, 10);
         glPopMatrix();
 
         glColor4f(0.0, 0.0, 1.0, 1.0);
         glPushMatrix();
             glTranslatef(i, 1, TRACK_OFFSET_Z + 190);
             glRotatef(270.0, 1, 0, 0);
-            GLUquadricObj *quadObject2 = gluNewQuadric();
-            gluCylinder(quadObject2, 10, 1, 79, 10, 10);
+            gluCylinder(q, 10, 1, 79, 10, 10);
         glPopMatrix();
     }
 
@@ -748,127 +687,84 @@ void draw_path() {
     glDisable(GL_TEXTURE_2D);
 }
 
-void draw_barrier() {
+void draw_barrier() { BarrierRenderer::drawBarrierSurface(POS_Z_CUTOFF_BARRIER, txId[2]); }
 
-    glBindTexture(GL_TEXTURE_2D, txId[1]);
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-    glEnable(GL_TEXTURE_2D);
+void draw_barrier_body() { BarrierRenderer::drawBarrierBody(POS_Z_CUTOFF_BARRIER, txId[2]); }
 
-    glPushMatrix();
-        glBegin(GL_QUADS);  // primitive type
-
-            // front
-            glTexCoord2f(0., 0.);
-            glVertex3f(50.0, 10.0, POS_Z_CUTOFF_BARRIER);
-            glTexCoord2f(5., 0.);
-            glVertex3f(-50.0, 10.0, POS_Z_CUTOFF_BARRIER);
-            glTexCoord2f(5., 1.);
-            glVertex3f(-50.0, 15.0, POS_Z_CUTOFF_BARRIER);
-            glTexCoord2f(0., 1.);
-            glVertex3f(50, 15.0, POS_Z_CUTOFF_BARRIER);
-
-        glEnd();
-    glPopMatrix();
-    glDisable(GL_TEXTURE_2D);
-}
-
-void draw_barrier_body() {
-    glBindTexture(GL_TEXTURE_2D, txId[2]);
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-    glEnable(GL_TEXTURE_2D);
-
-    glPushMatrix();
-        glBegin(GL_QUADS);
-
-        // column/body
-        glTexCoord2f(0., 0.);
-        glVertex3f(-45.0, 0.0, POS_Z_CUTOFF_BARRIER-1);
-        glTexCoord2f(1.0, 0.0);
-        glVertex3f(-55.0, 0.0, POS_Z_CUTOFF_BARRIER-1);
-        glTexCoord2f(1.0, 1.0);
-        glVertex3f(-55.0, 15.0, POS_Z_CUTOFF_BARRIER-1);
-        glTexCoord2f(0.0, 1.0);
-        glVertex3f(-45.0, 15.0, POS_Z_CUTOFF_BARRIER-1);
-
-        glEnd();
-    glPopMatrix();
-    glDisable(GL_TEXTURE_2D);
-}
-
-void draw_traffic_light() {
-    if (STOP_LIGHT) {
-        // red
-        glColor3f(1.0, 0.1, 0.1);
-    } else {
-        // green
-        glColor3f(0.0, 1.0, 0.1);
-    }
-    glPushMatrix();
-        glTranslatef(-50, 15, POS_Z_CUTOFF_BARRIER);
-        glutSolidSphere(3.0, 20.0, 20.0);
-    glPopMatrix();
-}
+void draw_traffic_light() { BarrierRenderer::drawTrafficLight(g_state.stop_light, POS_Z_CUTOFF_BARRIER); }
 
 void stop_light_logic(int value) {
-    STOP_LIGHT = BARRIER_THETA > 45.0 ? false : true;
+    (void)value;
+    g_animation.refreshStopLight();
     glutTimerFunc(20, stop_light_logic, 0);
 }
 
 
 void animate_barrier() {
-    glPushMatrix();
-        glTranslatef(-50.0, 10, POS_Z_CUTOFF_BARRIER);
-        glRotatef(BARRIER_THETA, 0.0, 0.0, 1);
-        glTranslatef(50.0, -10, -POS_Z_CUTOFF_BARRIER);
-        glVertex3f(-50.0, 10.0, POS_Z_CUTOFF_BARRIER);
-        draw_barrier();
-    glPopMatrix();
+    BarrierRenderer::drawAnimatedBarrierArm(g_state.barrier_theta, POS_Z_CUTOFF_BARRIER, txId[2]);
 }
 
 void barrier_logic(int value) {
-    if (BARRIER_THETA >= 90) {
-        BARRIER_LOWERING = true;
-    } else if (BARRIER_THETA <= 0) {
-        BARRIER_LOWERING = false;
-    }
-
-    if (BARRIER_LOWERING) {
-        BARRIER_THETA -= 0.5;
-    } else {
-        BARRIER_THETA += 0.5;
-    }
+    (void)value;
+    g_animation.barrierStep();
     glutTimerFunc(20, barrier_logic, 0);
 }
 
-void draw_speaker_tower(int value) {
+void visualizer_logic(int value) {
+    (void)value;
+    clock_t now = clock();
+    if (last_visualizer_update_ticks == 0) {
+        last_visualizer_update_ticks = now;
+    }
 
-    glColor4f(0.0, 1.0, 0.0, 1.0);
+    const float dt_seconds = static_cast<float>(now - last_visualizer_update_ticks) /
+        static_cast<float>(CLOCKS_PER_SEC);
+    last_visualizer_update_ticks = now;
+
+    g_visualizer.update(dt_seconds);
+    glutPostRedisplay();
+    glutTimerFunc(16, visualizer_logic, 0);
+}
+
+void draw_speaker_tower(int /*value*/) {
+
+    const float low = g_visualizer.low();
+    const float pulse = g_visualizer.pulse();
+    const float tower_height_scale = 12.0f + low * 8.0f + pulse * 4.0f;
+    const float green = 0.6f + 0.4f * g_visualizer.mid();
+
+    glColor4f(0.0, green, 0.2f + 0.5f * g_visualizer.high(), 1.0);
 
     glPushMatrix();
-        glScalef(3.0, 15.5, 10.0);
+        glScalef(3.0f, tower_height_scale, 10.0f);
         glRotatef(90.0, 1, 0, 0);
         glutSolidCube(10);
     glPopMatrix();
 }
 
 void draw_speak_tower_ears(void) {
-    glColor4f(1.0, 0.0, 1.0, 1.0);
+    glColor4f(1.0f, 0.4f + 0.6f * g_visualizer.high(), 1.0f, 1.0f);
     glPushMatrix();
+        const float ear_scale = 0.8f + g_visualizer.high() * 0.4f;
+        glScalef(ear_scale, ear_scale, ear_scale);
         glRotatef(270.0, 1, 0, 0);
         glutSolidCone(50.0, 50.0, 15, 15);
     glPopMatrix();
 }
 
 
-void draw_speakers(int value) {
-    glColor3f(0.0, 0.0, 0.0);
+void draw_speakers(int /*value*/) {
+    const float mid = g_visualizer.mid();
+    const float high = g_visualizer.high();
+    const float radius_scale = 1.0f + mid * 0.8f + g_visualizer.pulse() * 0.2f;
+    glColor3f(0.1f + 0.8f * high, 0.1f, 0.1f + 0.8f * mid);
     glPushMatrix();
 
         glBegin(GL_LINE_LOOP);
         for(int i =0; i <= 300; i++) {
             double angle = 2 * M_PI * i / 300.0;
-            double x = cos(angle);
-            double y = sin(angle);
+            double x = cos(angle) * radius_scale;
+            double y = sin(angle) * radius_scale;
             glVertex2d(x,y);
         }
         glEnd();
@@ -877,16 +773,20 @@ void draw_speakers(int value) {
 }
 
 
-void draw_dance_floor(int value) {
+void draw_dance_floor(int /*value*/) {
+    const float low = g_visualizer.low();
+    const float mid = g_visualizer.mid();
+    const float high = g_visualizer.high();
+    const float pulse = g_visualizer.pulse();
 
-    float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX/1.0);
-    float g = std::fmod(r, 0.5);
-    float b = std::fmod(r + 0.2, 0.5);
+    float r = 0.2f + 0.8f * low;
+    float g = 0.2f + 0.8f * mid;
+    float b = 0.2f + 0.8f * high;
 
     glPushMatrix();
         glBegin(GL_QUADS);
 
-        if (r <= 0.33) {
+        if (pulse > 0.7f) {
                 glColor3f(1.0f, 0.0, 0.0);
                 glVertex3f(-100.0f, 0.0f, 75.0f);
 
@@ -899,14 +799,14 @@ void draw_dance_floor(int value) {
                 glColor3f(1.0f, 0.0, 1.0);
                 glVertex3f(-100.0f, 0.0f, -75.0f);
 
-        } else if (r < 0.67) {
+        } else if (low > 0.55f) {
                 glColor3f(0.0f, 1.0, 1.0);
                 glVertex3f(-100.0f, 0.0f, 75.0f);
 
                 glColor3f(b, g, r);
                 glVertex3f(100.0f, 0.0f, 75.0f);
 
-                glColor3f(0.9f, 0.9, 0.9);
+                glColor3f(0.9f, 0.9f, 0.9f);
                 glVertex3f(100.0f, 0.0f, -75.0f);
 
                 glColor3f(r, b, g);
@@ -932,8 +832,53 @@ void draw_dance_floor(int value) {
     glPopMatrix();
 }
 
+void draw_visualizer_bars() {
+    const float low = g_visualizer.low();
+    const float mid = g_visualizer.mid();
+    const float high = g_visualizer.high();
+    const float pulse = g_visualizer.pulse();
+
+    const float heights[3] = {
+        20.0f + low * 220.0f,
+        20.0f + mid * 220.0f,
+        20.0f + high * 220.0f
+    };
+    const float x_offsets[3] = {-55.0f, 0.0f, 55.0f};
+
+    glPushMatrix();
+        glTranslatef(-170.0f, 0.0f, -130.0f);
+
+        glColor3f(0.15f, 0.15f, 0.15f);
+        glPushMatrix();
+            glScalef(200.0f, 4.0f, 70.0f);
+            glutSolidCube(1.0f);
+        glPopMatrix();
+
+        for (int i = 0; i < 3; ++i) {
+            glPushMatrix();
+                glTranslatef(x_offsets[i], heights[i] * 0.5f, 0.0f);
+
+                if (i == 0) glColor3f(1.0f, 0.2f, 0.2f);
+                if (i == 1) glColor3f(0.2f, 1.0f, 0.2f);
+                if (i == 2) glColor3f(0.2f, 0.4f, 1.0f);
+
+                glScalef(30.0f, heights[i], 30.0f);
+                glutSolidCube(1.0f);
+            glPopMatrix();
+        }
+
+        if (pulse > 0.5f) {
+            glPushMatrix();
+                glColor3f(1.0f, 1.0f, 1.0f);
+                glTranslatef(0.0f, 15.0f, 0.0f);
+                glutWireCube(230.0f + pulse * 90.0f);
+            glPopMatrix();
+        }
+    glPopMatrix();
+}
+
 //--Draws a character model constructed using GLUT object ------------------
-void drawModel(int model_count) {
+void drawModel(int /*model_count*/) {
     //for (int i=1; i<model_count; i++) {
     for (int i=1; i<2; i++) {
         glPushMatrix();
@@ -1015,6 +960,7 @@ void drawModel(int model_count) {
 
 //--Walk:   ---------------------------------------------------------------
 void walk(int value) {
+    (void)value;
     glutPostRedisplay();
     if (rising_theta) {
         humanoid_theta++;
@@ -1080,8 +1026,7 @@ void display(void)
 
         // Parallel trains
         glPushMatrix();
-            linear_train(false);
-            linear_train(true);
+            linear_train();
         glPopMatrix();
 
 
@@ -1092,6 +1037,8 @@ void display(void)
             glTranslatef(-170.0f, 0.1f, 0.f);
             draw_dance_floor(0);
         glPopMatrix();
+
+        draw_visualizer_bars();
 
         glPushMatrix();
             glTranslatef(-250.0f, 0.1f, 0.f);
@@ -1131,6 +1078,14 @@ void display(void)
         // draw traffic light ontop of barrier
         draw_traffic_light();
 
+        if (g_visualizer.pulse() > 0.85f) {
+            glPushMatrix();
+                glColor3f(1.0f, 1.0f, 1.0f);
+                glTranslatef(-170.0f, 5.0f, 0.0f);
+                glutWireSphere(120.0f + 40.0f * g_visualizer.high(), 24, 24);
+            glPopMatrix();
+        }
+
         /*
          * Originally had ambient lights on the barrier arms
         glPushMatrix();
@@ -1161,20 +1116,6 @@ void display(void)
         glPopMatrix();
 
 
-        // humanoid
-        srand (static_cast <unsigned> (time(0))); // current time as seed
-        random_float = RAND_LOW + static_cast <float> (rand()) / static_cast <float> (RAND_MAX/RAND_HI);
-        std::default_random_engine generator (random_float);
-        std::normal_distribution<double> distribution (0.0, 1.0);
-
-        random_float = 10 * distribution(generator);
-
-        if (random_float > RAND_MID) {
-            RAND_HI = random_float;
-        } else if (random_float < RAND_MID) {
-            RAND_LOW = random_float;
-        }
-
         glEnable(GL_LIGHTING);	       //Enable lighting when drawing the model
         drawModel(MODEL_COUNT);
     glPopMatrix();
@@ -1184,7 +1125,12 @@ void display(void)
     delta_ticks = clock() - current_ticks;
     if (delta_ticks > 0)
         fps = CLOCKS_PER_SEC / delta_ticks;
-    cout << fps << endl;
+
+    const clock_t now_ticks = clock();
+    if (now_ticks - last_fps_log_ticks > CLOCKS_PER_SEC / 2) {
+        std::cout << fps << std::endl;
+        last_fps_log_ticks = now_ticks;
+    }
 }
 
 
@@ -1192,6 +1138,10 @@ void display(void)
 //---------------------------------------------------------------------
 int main(int argc, char** argv) {
     // Works best with -std=c++0x -W -Wall -Wextra -pedantic
+
+    srand(static_cast<unsigned>(time(nullptr)));
+    g_state.train0_location_z = TRACK_OFFSET_Z + (WAGON_WIDTH / 2.0f);
+    g_state.train1_location_z = -TRACK_OFFSET_Z + (WAGON_WIDTH / 2.0f);
 
     if (argc > 1) {
        int input= atoi(argv[1]);
@@ -1209,6 +1159,7 @@ int main(int argc, char** argv) {
    glutInitWindowPosition (0, 0);
    window_id = glutCreateWindow ("github.com/C-Kenny | Mouse to look, WASD to move!");
 
+    init_wagon_colors();
    initialize ();
 
    glutDisplayFunc(display);
@@ -1224,6 +1175,7 @@ int main(int argc, char** argv) {
    glutTimerFunc(10, walk, 0);
    glutTimerFunc(10, barrier_logic, 0);
    glutTimerFunc(20, stop_light_logic, 0);
+    glutTimerFunc(16, visualizer_logic, 0);
    glutPassiveMotionFunc(mouse_move); // process mouse when no button is down
    //glutMotionFunc(mouse_move); // process mouse when button is down, DESIGN CHOICE TO REMOVE
    glutMainLoop();
